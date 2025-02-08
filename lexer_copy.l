@@ -8,7 +8,7 @@ int yylineno;
 
 letter [a-zA-Z]
 digit [0-9]
-id {letter}(_|{letter}|{digit})*
+id (_|{letter})(_|{letter}|{digit})*
 strlit \".*\"
 opsign [+-]?
 opfrac (\.{digit})?
