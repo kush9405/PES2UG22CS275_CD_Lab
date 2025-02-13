@@ -1,0 +1,13 @@
+symbol* init_symbol(char* name, int size, int type, int lineno, int scope){
+	symbol* s = (symbol*)malloc(sizeof(symbol));
+	s->name = (char*)malloc(sizeof(char)*(strlen(name)+1));
+	strcpy(s->name, name);
+	s->size = size;
+	s->type = type;
+	s->line = lineno;
+	s->scope = scope;
+	s->val = (char*)malloc(sizeof(char)*10);
+	strcpy(s->val, "~");
+	s->next = NULL;
+	return s;
+}
