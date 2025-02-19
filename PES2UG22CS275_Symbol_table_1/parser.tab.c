@@ -128,28 +128,22 @@
 
 
 /* Copy the first part of user declarations.  */
-#line 1 "parser.y"
+#line 1 "Parser.y"
 
-	#include "sym_tab.h"
-	#include <stdio.h>
-	#include <stdlib.h>
-	#include <string.h>
-	#define YYSTYPE char*
-	
-	int scope = 0;
-	int type = -1;
-	char* vval = "-";
-	
-	void yyerror(char* s); // Error handling function
-	int yylex(); // Function performing lexical analysis
-	extern int yylineno; // Track the line number
+    #include "sym_tab.h"
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
 
-	// Define type values
-	#define INT 1
-	#define FLOAT 2
-	#define DOUBLE 3
-	#define CHAR 4
+    #define YYSTYPE char*
 
+    void yyerror(char* s);
+    int yylex();
+    extern int yylineno;
+
+    int current_type;
+    int current_scope = 1;
+    char temp[100];
 
 
 /* Enabling traces.  */
@@ -183,7 +177,7 @@ typedef int YYSTYPE;
 
 
 /* Line 216 of yacc.c.  */
-#line 187 "parser.tab.c"
+#line 181 "Parser.tab.c"
 
 #ifdef short
 # undef short
@@ -483,11 +477,11 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    34,    34,    37,    38,    39,    40,    43,    46,    47,
-      50,    56,    63,    64,    65,    66,    70,    79,    80,    83,
-      84,    85,    89,    90,    91,    94,    95,    96,    97,   100,
-     101,   102,   103,   104,   105,   109,   111,   112,   115,   116,
-     117,   120,   121,   124
+       0,    27,    27,    32,    33,    34,    35,    38,    40,    41,
+      44,    53,    64,    65,    66,    67,    70,    81,    82,    85,
+      89,    93,    96,   100,   109,   112,   113,   127,   128,   131,
+     131,   131,   131,   131,   131,   133,   135,   135,   137,   138,
+     139,   142,   143,   146
 };
 #endif
 
@@ -1440,63 +1434,165 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 34 "parser.y"
-    { printf("Valid syntax\n"); YYACCEPT; ;}
+#line 27 "Parser.y"
+    { 
+    printf("Valid syntax\n"); 
+    YYACCEPT; 
+;}
     break;
 
   case 10:
-#line 50 "parser.y"
+#line 44 "Parser.y"
     {
-				if (check_sym_tab((yyvsp[(1) - (3)])))
-					yyerror((yyvsp[(1) - (3)]));
-				insert_symbol((yyvsp[(1) - (3)]), size(type), type, yylineno, scope);
-				insert_val((yyvsp[(1) - (3)]), vval, yylineno);
-			;}
+        int idx = find_symbol((yyvsp[(1) - (3)]), current_scope);
+        if (idx != -1) {
+            printf("Variable %s already declared\n", (yyvsp[(1) - (3)]));
+            printf("Error :%s at %d\n", (yyvsp[(1) - (3)]), yylineno);
+        } else {
+            insert_symbol((yyvsp[(1) - (3)]), get_size(current_type), current_type, yylineno, current_scope, (yyvsp[(3) - (3)]));
+        }
+    ;}
     break;
 
   case 11:
-#line 56 "parser.y"
+#line 53 "Parser.y"
     {
-				if (check_sym_tab((yyvsp[(1) - (1)])))
-					yyerror((yyvsp[(1) - (1)]));
-				insert_symbol((yyvsp[(1) - (1)]), size(type), type, yylineno, scope);
-			;}
+        int idx = find_symbol((yyvsp[(1) - (1)]), current_scope);
+        if (idx != -1) {
+            printf("Variable %s already declared\n", (yyvsp[(1) - (1)]));
+            printf("Error :%s at %d\n", (yyvsp[(1) - (1)]), yylineno);
+        } else {
+            insert_symbol((yyvsp[(1) - (1)]), get_size(current_type), current_type, yylineno, current_scope, NULL);
+        }
+    ;}
     break;
 
   case 12:
-#line 63 "parser.y"
-    { type = INT; ;}
+#line 64 "Parser.y"
+    { current_type = 2; ;}
     break;
 
   case 13:
-#line 64 "parser.y"
-    { type = FLOAT; ;}
+#line 65 "Parser.y"
+    { current_type = 3; ;}
     break;
 
   case 14:
-#line 65 "parser.y"
-    { type = DOUBLE; ;}
+#line 66 "Parser.y"
+    { current_type = 4; ;}
     break;
 
   case 15:
-#line 66 "parser.y"
-    { type = CHAR; ;}
+#line 67 "Parser.y"
+    { current_type = 1; ;}
     break;
 
   case 16:
-#line 70 "parser.y"
+#line 70 "Parser.y"
     {
-				if (check_sym_tab((yyvsp[(1) - (3)])))
-					yyerror((yyvsp[(1) - (3)]));
-				insert_symbol((yyvsp[(1) - (3)]), size(type), type, yylineno, scope);
-				insert_val((yyvsp[(1) - (3)]), vval, yylineno);
-				vval = "-";  // Missing semicolon fixed
-			;}
+        int idx = find_symbol((yyvsp[(1) - (3)]), current_scope);
+        if (idx == -1) {
+            printf("Variable %s not declared\n", (yyvsp[(1) - (3)]));
+            printf("Error :%s at %d\n", (yyvsp[(1) - (3)]), yylineno);
+        } else {
+            update_symbol_value(idx, (yyvsp[(3) - (3)]));
+        }
+    ;}
+    break;
+
+  case 17:
+#line 81 "Parser.y"
+    { (yyval) = (yyvsp[(1) - (3)]); ;}
+    break;
+
+  case 18:
+#line 82 "Parser.y"
+    { (yyval) = (yyvsp[(1) - (1)]); ;}
+    break;
+
+  case 19:
+#line 85 "Parser.y"
+    {
+        sprintf(temp, "%f", atof((yyvsp[(1) - (3)])) + atof((yyvsp[(3) - (3)])));
+        (yyval) = strdup(temp);
+    ;}
+    break;
+
+  case 20:
+#line 89 "Parser.y"
+    {
+        sprintf(temp, "%f", atof((yyvsp[(1) - (3)])) - atof((yyvsp[(3) - (3)])));
+        (yyval) = strdup(temp);
+    ;}
+    break;
+
+  case 21:
+#line 93 "Parser.y"
+    { (yyval) = (yyvsp[(1) - (1)]); ;}
+    break;
+
+  case 22:
+#line 96 "Parser.y"
+    {
+        sprintf(temp, "%f", atof((yyvsp[(1) - (3)])) * atof((yyvsp[(3) - (3)])));
+        (yyval) = strdup(temp);
+    ;}
+    break;
+
+  case 23:
+#line 100 "Parser.y"
+    {
+        if (atof((yyvsp[(3) - (3)])) != 0) {
+            sprintf(temp, "%f", atof((yyvsp[(1) - (3)])) / atof((yyvsp[(3) - (3)])));
+            (yyval) = strdup(temp);
+        } else {
+            yyerror("Division by zero");
+            (yyval) = strdup("0");
+        }
+    ;}
+    break;
+
+  case 24:
+#line 109 "Parser.y"
+    { (yyval) = (yyvsp[(1) - (1)]); ;}
+    break;
+
+  case 25:
+#line 112 "Parser.y"
+    { (yyval) = (yyvsp[(2) - (3)]); ;}
+    break;
+
+  case 26:
+#line 113 "Parser.y"
+    {
+        int idx = find_symbol((yyvsp[(1) - (1)]), current_scope);
+        if (idx == -1) {
+            printf("Variable %s not declared\n", (yyvsp[(1) - (1)]));
+            printf("Error :%s at %d\n", (yyvsp[(1) - (1)]), yylineno);
+            (yyval) = strdup("0");
+        } else if (!symtab[idx].value) {
+            printf("Variable %s not initialized\n", (yyvsp[(1) - (1)]));
+            printf("Error :%s at %d\n", (yyvsp[(1) - (1)]), yylineno);
+            (yyval) = strdup("0");
+        } else {
+            (yyval) = strdup(symtab[idx].value);
+        }
+    ;}
+    break;
+
+  case 27:
+#line 127 "Parser.y"
+    { (yyval) = (yyvsp[(1) - (1)]); ;}
+    break;
+
+  case 28:
+#line 128 "Parser.y"
+    { (yyval) = (yyvsp[(1) - (1)]); ;}
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1500 "parser.tab.c"
+#line 1596 "Parser.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1710,18 +1806,16 @@ yyreturn:
 }
 
 
-#line 130 "parser.y"
+#line 148 "Parser.y"
 
 
-/* Error handling function */
-void yyerror(char* s)
-{
-	printf("Error: %s at line %d\n", s, yylineno);
+void yyerror(char* s) { 
+    printf("Error :%s at %d\n", s, yylineno); 
 }
 
-int main(int argc, char* argv[]) {
-    t = init_table();  // Ensure table is initialized
+int main(int argc, char* argv[]) { 
+    init_table();
     yyparse();
-    display_sym_tab();
+    display_symbol_table();
     return 0;
 }

@@ -1,143 +1,159 @@
 %{
-	#include "sym_tab.h"
-	#include <stdio.h>
-	#include <stdlib.h>
-	#include <string.h>
-	#define YYSTYPE char*
-	
-	int scope = 0;
-	int type = -1;
-	char* vval = "-";
-	
-	void yyerror(char* s); // Error handling function
-	int yylex(); // Function performing lexical analysis
-	extern int yylineno; // Track the line number
+    #include "sym_tab.h"
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
 
-	// Define type values
-	#define INT 1
-	#define FLOAT 2
-	#define DOUBLE 3
-	#define CHAR 4
+    #define YYSTYPE char*
 
+    void yyerror(char* s);
+    int yylex();
+    extern int yylineno;
+
+    int current_type;
+    int current_scope = 1;
+    char temp[100];
 %}
 
-%token T_INT T_CHAR T_DOUBLE T_WHILE  T_INC T_DEC   
-%token T_OROR T_ANDAND T_EQCOMP T_NOTEQUAL T_GREATEREQ T_LESSEREQ 
-%token T_LEFTSHIFT T_RIGHTSHIFT T_PRINTLN T_STRING  
-%token T_FLOAT T_BOOLEAN T_IF T_ELSE T_STRLITERAL 
+%token T_INT T_CHAR T_DOUBLE T_WHILE T_INC T_DEC T_OROR T_ANDAND
+%token T_EQCOMP T_NOTEQUAL T_GREATEREQ T_LESSEREQ T_LEFTSHIFT T_RIGHTSHIFT
+%token T_PRINTLN T_STRING T_FLOAT T_BOOLEAN T_IF T_ELSE T_STRLITERAL
 %token T_DO T_INCLUDE T_HEADER T_MAIN T_ID T_NUM
 
 %start START
 
 %%
 
-START : PROG { printf("Valid syntax\n"); YYACCEPT; }	
-        ;	
+START : PROG { 
+    printf("Valid syntax\n"); 
+    YYACCEPT; 
+};
 
-PROG :  MAIN PROG				
-	| DECLR ';' PROG 				
-	| ASSGN ';' PROG 			
-	| 					
-	;
-
-DECLR : TYPE LISTVAR 
-	;	
-
-LISTVAR : LISTVAR ',' VAR 
-	  | VAR
-	  ;
-
-VAR: T_ID '=' EXPR 	{
-				if (check_sym_tab($1))
-					yyerror($1);
-				insert_symbol($1, size(type), type, yylineno, scope);
-				insert_val($1, vval, yylineno);
-			}
-     | T_ID 		{
-				if (check_sym_tab($1))
-					yyerror($1);
-				insert_symbol($1, size(type), type, yylineno, scope);
-			}	 
-
-// Assign type here to be returned to the declaration grammar
-TYPE : T_INT    { type = INT; }
-     | T_FLOAT  { type = FLOAT; }
-     | T_DOUBLE { type = DOUBLE; }
-     | T_CHAR   { type = CHAR; }
+PROG : MAIN PROG
+     | DECLR ';' PROG
+     | ASSGN ';' PROG
+     | 
      ;
 
-/* Grammar for assignment */   
-ASSGN : T_ID '=' EXPR 	{
-				if (check_sym_tab($1))
-					yyerror($1);
-				insert_symbol($1, size(type), type, yylineno, scope);
-				insert_val($1, vval, yylineno);
-				vval = "-";  // Missing semicolon fixed
-			}
-	;
+DECLR : TYPE LISTVAR;
 
-EXPR : EXPR REL_OP E
-       | E 
-       ;
-	   
-E : E '+' T
-    | E '-' T
-    | T 
-    ;
-	
-	
-T : T '*' F
-    | T '/' F
-    | F
-    ;
+LISTVAR : LISTVAR ',' VAR
+        | VAR
+        ;
 
-F : '(' EXPR ')'
-    | T_ID
-    | T_NUM 
-    | T_STRLITERAL 
+VAR : T_ID '=' EXPR {
+        int idx = find_symbol($1, current_scope);
+        if (idx != -1) {
+            printf("Variable %s already declared\n", $1);
+            printf("Error :%s at %d\n", $1, yylineno);
+        } else {
+            insert_symbol($1, get_size(current_type), current_type, yylineno, current_scope, $3);
+        }
+    }
+    | T_ID {
+        int idx = find_symbol($1, current_scope);
+        if (idx != -1) {
+            printf("Variable %s already declared\n", $1);
+            printf("Error :%s at %d\n", $1, yylineno);
+        } else {
+            insert_symbol($1, get_size(current_type), current_type, yylineno, current_scope, NULL);
+        }
+    }
     ;
 
-REL_OP :   T_LESSEREQ
-	   | T_GREATEREQ
-	   | '<' 
-	   | '>' 
-	   | T_EQCOMP
-	   | T_NOTEQUAL
-	   ;	
+TYPE : T_INT    { current_type = 2; }
+     | T_FLOAT  { current_type = 3; }
+     | T_DOUBLE { current_type = 4; }
+     | T_CHAR   { current_type = 1; }
+     ;
 
-/* Grammar for main function */
-MAIN : TYPE T_MAIN '(' EMPTY_LISTVAR ')' '{' STMT '}' ;
+ASSGN : T_ID '=' EXPR {
+        int idx = find_symbol($1, current_scope);
+        if (idx == -1) {
+            printf("Variable %s not declared\n", $1);
+            printf("Error :%s at %d\n", $1, yylineno);
+        } else {
+            update_symbol_value(idx, $3);
+        }
+    }
+    ;
 
-EMPTY_LISTVAR : LISTVAR
-		|	
-		;
+EXPR : EXPR REL_OP E  { $$ = $1; }
+     | E              { $$ = $1; }
+     ;
+
+E : E '+' T {
+        sprintf(temp, "%f", atof($1) + atof($3));
+        $$ = strdup(temp);
+    }
+  | E '-' T {
+        sprintf(temp, "%f", atof($1) - atof($3));
+        $$ = strdup(temp);
+    }
+  | T { $$ = $1; }
+  ;
+
+T : T '*' F {
+        sprintf(temp, "%f", atof($1) * atof($3));
+        $$ = strdup(temp);
+    }
+  | T '/' F {
+        if (atof($3) != 0) {
+            sprintf(temp, "%f", atof($1) / atof($3));
+            $$ = strdup(temp);
+        } else {
+            yyerror("Division by zero");
+            $$ = strdup("0");
+        }
+    }
+  | F { $$ = $1; }
+  ;
+
+F : '(' EXPR ')' { $$ = $2; }
+  | T_ID {
+        int idx = find_symbol($1, current_scope);
+        if (idx == -1) {
+            printf("Variable %s not declared\n", $1);
+            printf("Error :%s at %d\n", $1, yylineno);
+            $$ = strdup("0");
+        } else if (!symtab[idx].value) {
+            printf("Variable %s not initialized\n", $1);
+            printf("Error :%s at %d\n", $1, yylineno);
+            $$ = strdup("0");
+        } else {
+            $$ = strdup(symtab[idx].value);
+        }
+    }
+  | T_NUM { $$ = $1; }
+  | T_STRLITERAL { $$ = $1; }
+  ;
+
+REL_OP : T_LESSEREQ | T_GREATEREQ | '<' | '>' | T_EQCOMP | T_NOTEQUAL;
+
+MAIN : TYPE T_MAIN '(' EMPTY_LISTVAR ')' '{' STMT '}';
+
+EMPTY_LISTVAR : LISTVAR | ;
 
 STMT : STMT_NO_BLOCK STMT
-       | BLOCK STMT
-       |
-       ;
+     | BLOCK STMT
+     | 
+     ;
 
 STMT_NO_BLOCK : DECLR ';'
-       | ASSGN ';' 
-       ;
+             | ASSGN ';'
+             ;
 
-BLOCK : '{' STMT '}' ;
-
-COND : EXPR 
-       | ASSGN
-       ;
+BLOCK : '{' STMT '}';
 
 %%
 
-/* Error handling function */
-void yyerror(char* s)
-{
-	printf("Error: %s at line %d\n", s, yylineno);
+void yyerror(char* s) { 
+    printf("Error :%s at %d\n", s, yylineno); 
 }
 
-int main(int argc, char* argv[]) {
-    t = init_table();  // Ensure table is initialized
+int main(int argc, char* argv[]) { 
+    init_table();
     yyparse();
-    display_sym_tab();
+    display_symbol_table();
     return 0;
 }

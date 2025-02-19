@@ -1,104 +1,66 @@
-//sym_tab.c
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "sym_tab.h"
 
-table* t = NULL; // Define the global table pointer
+// Define the global symbol table
+struct symbol symtab[100];
+int symtab_index = 0;
 
-table* init_table() { 
-    t = (table*)malloc(sizeof(table));
-    t->head = NULL;
-    return t;
+// Initialize the symbol table
+void init_table() {
+    symtab_index = 0;
 }
 
-symbol* init_symbol(char* name, int size, int type, int lineno, int scope) //allocates space for items in the list
-{
-    symbol* s = (symbol*)malloc(sizeof(symbol));
-    s->name=(char*)malloc(sizeof(char)*(strlen(name)+1));
-    strcpy(s->name,name);
-    s->size=size;
-    s->type = type;
-    s->line=lineno;
-    s->scope=scope;
-    s->val=(char*)malloc(sizeof(char)*10);
-    strcpy(s->val,"-");
-    s->next=NULL;
-    return s;
-
-}
-
-
-void insert_symbol(char* name, int size, int type, int lineno, int scope) {
-    if (t == NULL) { // Initialize if not already initialized
-        t = init_table();
-    }
-
-    symbol* s = init_symbol(name, size, type, lineno, scope);
-    if (t->head == NULL) {
-        t->head = s;
-        return;
-    }
-
-    symbol* curr = t->head;
-    while (curr->next != NULL) {
-        curr = curr->next;
-    }
-    curr->next = s;
-}
-
-void insert_val(char* name,char* v,int line){
-    if (strcmp(v, "-") == 0)
-        return;
-    if(t->head==NULL)
-    {
-        return;
-    }
-    symbol* curr=t->head;
-    while(curr!=NULL)
-    {
-        if(strcmp(curr->name,name)==0)
-        {
-            strcpy(curr->val,v);
-            curr->line=line;
-            return;
+// Find a symbol in the table
+int find_symbol(char* name, int scope) {
+    for (int i = 0; i < symtab_index; i++) {
+        if (strcmp(symtab[i].name, name) == 0 && symtab[i].scope == scope) {
+            return i;
         }
-        curr=curr->next;
+    }
+    return -1;
+}
+
+// Insert a symbol into the table
+void insert_symbol(char* name, int size, int type, int lineno, int scope, char* value) {
+    symtab[symtab_index].name = strdup(name);
+    symtab[symtab_index].size = size;
+    symtab[symtab_index].type = type;
+    symtab[symtab_index].lineno = lineno;
+    symtab[symtab_index].scope = scope;
+    symtab[symtab_index].value = value ? strdup(value) : NULL;
+    symtab_index++;
+}
+
+// Update the value of an existing symbol
+void update_symbol_value(int index, char* value) {
+    if (symtab[index].value) {
+        free(symtab[index].value);
+    }
+    symtab[index].value = strdup(value);
+}
+
+// Display the symbol table
+void display_symbol_table() {
+    printf("Name\tSize\tType\tLine No\tScope\tValue\n");
+    printf("-------------------------------------------------\n");
+
+    for (int i = 0; i < symtab_index; i++) {
+        printf("%s\t%d\t%d\t%d\t%d\t%s\n",
+               symtab[i].name,
+               symtab[i].size,
+               symtab[i].type,
+               symtab[i].lineno,
+               symtab[i].scope,
+               symtab[i].value ? symtab[i].value : "");
     }
 }
 
-int check_sym_tab(char* name) {
-    if (t == NULL || t->head == NULL) { // Prevent NULL dereference
-        return 0;
+// Get the size of a type
+int get_size(int type) {
+    switch (type) {
+        case 1: return 1; // char
+        case 2: return 2; // int
+        case 3: return 4; // float
+        case 4: return 8; // double
+        default: return 0;
     }
-
-    symbol* curr = t->head;
-    while (curr != NULL) {
-        if (strcmp(curr->name, name) == 0) {
-            return 1;
-        }
-        curr = curr->next;
-    }
-    return 0;
-}
-
-void display_sym_tab(){
-    symbol* curr=t->head;
-    if(curr==NULL){
-        return;
-    }
-    printf("NAME\tSIZE\tTYPE\tLINENO\tSCOPE\tVALUE\n");
-    while(curr!=NULL)
-    {
-        printf("%s\t%d\t%d\t%d\t%d\t%s\n",curr->name,curr->size,curr->type,curr->line,curr->scope,curr->val);
-        curr=curr->next;
-    }
-}
-int size(int type)
-{
-    if(type==3)
-        return 4;
-    if(type==4)
-        return 8;
-    return type;
 }
